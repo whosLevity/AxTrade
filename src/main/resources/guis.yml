@@ -2,16 +2,10 @@
 # ITEM BUILDER: https://docs.artillex-studios.com/item-builder.html
 
 # ----- SETTINGS -----
-
 title: "&0Trading with: %player%"
-# a gui can have 1-6 rows
 rows: 6
 
 # ----- SLOTS -----
-
-# the slots where the items can be placed
-# make sure to not put decorative items or currency items in the these slots
-# the own-slots and partner-slots must have an equal amount of slots
 own-slots:
   - 9-12
   - 18-21
@@ -27,20 +21,12 @@ partner-slots:
   - 50-53
 
 # ----- ITEMS -----
-
-# items on your side
 own:
   confirm-item:
     slot: 0
-    # you can use these placeholders:
-    # %own-name%"
-    # %partner-name%
     accept:
       material: "RED_CONCRETE"
-      # if you want, you can add head textures, like this:
-      #material: "PLAYER_HEAD"
-      #texture: "%own-head%"
-      name: "&#00ffdd&lᴀᴄᴄᴇᴘᴛ ᴛʀᴀᴅᴇ"
+      name: "&#00ffdd&lAccept Trade"
       lore:
         - ""
         - " &7- &fAre you happy with the trade?"
@@ -48,35 +34,30 @@ own:
         - "&#00ffdd&l> &#00ffddClick &8- &#00ffddConfirm Trade"
     cancel:
       material: "LIME_CONCRETE"
-      name: "&#00ffdd&lᴄᴀɴᴄᴇʟ ᴄᴏɴғɪʀᴍᴀᴛɪᴏɴ"
+      name: "&#00ffdd&lCancel Confirmation"
       lore:
         - ""
         - " &7- &fDo you want to change something?"
         - ""
         - "&#00ffdd&l> &#00ffddClick &8- &#00ffddCancel Confirmation"
-  # you can define as many currencies as you want, but make sure to copy them to the 'partner' section too!
+
   currency1:
     slot: 2
-    # you need Vault installed for this
     currency: "Vault"
     material: "GOLD_NUGGET"
-    name: "&#00ffdd&lᴍᴏɴᴇʏ"
-    # you can use these placeholders:
-    #  %amount% (the amount the player set)
-    #  %tax-amount% (amount after tax)
-    #  %tax-percent% (the % of tax on the currency)
-    #  %tax-fee% (amount taken because of tax)
+    name: "&#00ffdd&lMoney"
     lore:
       - "&7Your offer"
       - ""
       - " &7- &fAmount: &#00ffdd%amount%$"
       - ""
       - "&#00ffdd&l> &#00ffddClick &8- &#00ffddChange Amount"
+
   currency2:
     slot: 3
     currency: "Experience"
     material: "EXPERIENCE_BOTTLE"
-    name: "&#00ffdd&lᴇxᴘᴇʀɪᴇɴᴄᴇ"
+    name: "&#00ffdd&lExperience"
     lore:
       - "&7Your offer"
       - ""
@@ -84,61 +65,122 @@ own:
       - ""
       - "&#00ffdd&l> &#00ffddClick &8- &#00ffddChange Amount"
 
-# items on your trade partner's side
+  currency-selector:
+    enabled: false
+    slot: 2
+    material: "CLOCK"
+    name: "&#00ffdd&lCurrencies"
+    lore:
+      - "&7Your offer"
+      - ""
+      - "%selected-lines%"
+      - ""
+      - "&#00ffdd&l> &#00ffddClick &8- &#00ffddChoose currency"
+
+  cosmetic-item:
+    slot: 1
+    material: "NETHER_STAR"
+    name: "&#00ffdd&lCosmetics"
+    lore:
+      - "&7Your offer"
+      - ""
+      - " &7- &fSelected: &#00ffdd%cosmetic%"
+      - ""
+      - "&#00ffdd&l> &#00ffddClick &8- &#00ffddSelect cosmetic"
+
 partner:
   confirm-item:
     slot: 8
-    # you can also use these placeholders:
-    # %own-name%"
-    # %partner-name%
     accept:
       material: "RED_CONCRETE"
-      # if you want, you can add head textures, like this:
-      #material: "PLAYER_HEAD"
-      #texture: "%partner-head%"
-      name: "&#00ffdd&lᴡᴀɪᴛɪɴɢ ғᴏʀ ᴏᴛʜᴇʀ ᴘʟᴀʏᴇʀ"
+      name: "&#00ffdd&lWaiting For Other Player"
       lore:
         - ""
         - " &7- &f%partner-name% has not yet confirmed the trade!"
         - ""
     cancel:
       material: "LIME_CONCRETE"
-      name: "&#00ffdd&lᴡᴀɪᴛɪɴɢ"
+      name: "&#00ffdd&lWaiting"
       lore:
         - ""
         - " &7- &f%partner-name% has confirmed the trade!"
+
   currency1:
     slot: 6
     currency: "Vault"
     material: "GOLD_NUGGET"
-    name: "&#00ffdd&lᴍᴏɴᴇʏ"
-    # you can use these placeholders:
-    #  %amount% (the amount the player set)
-    #  %tax-amount% (amount after tax)
-    #  %tax-percent% (the % of tax on the currency)
-    #  %tax-fee% (amount taken because of tax)
+    name: "&#00ffdd&lMoney"
     lore:
       - "&7%partner-name%'s offer"
       - ""
       - " &7- &fAmount: &#00ffdd%amount%$"
       - ""
-      - "&#00ffdd&l> &#00ffddClick &8- &#00ffddChange Amount"
+
   currency2:
     slot: 5
     currency: "Experience"
     material: "EXPERIENCE_BOTTLE"
-    name: "&#00ffdd&lᴇxᴘᴇʀɪᴇɴᴄᴇ"
+    name: "&#00ffdd&lExperience"
     lore:
       - "&7%partner-name%'s offer"
       - ""
       - " &7- &fAmount: &#00ffdd%amount% EXP"
       - ""
-      - "&#00ffdd&l> &#00ffddClick &8- &#00ffddChange Amount"
+
+  currency-selector:
+    slot: 6
+    material: "CLOCK"
+    name: "&#00ffdd&lCurrencies"
+    lore:
+      - "&7%partner-name%'s offer"
+      - ""
+      - "%selected-lines%"
+      - ""
+
+  cosmetic-item:
+    slot: 7
+    material: "NETHER_STAR"
+    name: "&#00ffdd&lCosmetics"
+    lore:
+      - "&7%partner-name%'s offer"
+      - ""
+      - " &7- &fSelected: &#00ffdd%cosmetic%"
+      - ""
 
 decoration-example:
   slot: [4, 13, 22, 31, 40, 49]
   material: "LIGHT_BLUE_STAINED_GLASS_PANE"
   name: " "
 
-# do not change this
+currency-selector:
+  title: "&0Select Currency"
+  rows: 3
+  slots:
+    - 10-16
+  close-item:
+    slot: 22
+    material: "BARRIER"
+    name: "&#ff6666&lBack"
+    lore:
+      - "&7Return to trade"
+  items:
+    Vault:
+      material: "GOLD_NUGGET"
+      name: "&#00ffdd&lMoney"
+      lore:
+        - "&7Your offer"
+        - ""
+        - " &7- &fAmount: &#00ffdd%amount%$"
+        - ""
+        - "&#00ffdd&l> &#00ffddClick &8- &#00ffddChange Amount"
+    Experience:
+      material: "EXPERIENCE_BOTTLE"
+      name: "&#00ffdd&lExperience"
+      lore:
+        - "&7Your offer"
+        - ""
+        - " &7- &fAmount: &#00ffdd%amount% EXP"
+        - ""
+        - "&#00ffdd&l> &#00ffddClick &8- &#00ffddChange Amount"
+
 version: 1

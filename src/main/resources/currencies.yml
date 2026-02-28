@@ -33,61 +33,6 @@ currencies:
   Vault:
     register: true
     name: "money"
-  PlayerPoints:
-    register: true
-    name: "points"
-  RoyaleEconomy:
-    register: true
-    name: "money"
-  CoinsEngine:
-    register: true
-    enabled:
-      - currency-name: "coins"
-        name: "coins"
-      - currency-name: "money"
-        name: "money"
-  UltraEconomy:
-    register: true
-    enabled:
-      - currency-name: "coins"
-        name: "coins"
-  KingdomsX:
-    register: true
-    name: "nexus points"
-  RivalHarvesterHoes:
-    register: true
-    name: "essence"
-  SuperMobCoins:
-    register: true
-    name: "mobcoin"
-  TheOnly-MobCoins:
-    register: true
-    name: "mobcoins"
-  TokenManager:
-    register: true
-    name: "tokens"
-  AxQuestBoard:
-    register: true
-    name: "quest points"
-  AxHoes:
-    register: true
-    name: "essence"
-  RedisEconomy:
-    register: true
-    enabled:
-      - currency-name: "coins"
-        name: "coins"
-  BeastTokens:
-    register: true
-    name: "tokens"
-  EcoBits:
-    register: true
-    enabled:
-      - currency-name: "crystals"
-        name: "crystals"
-  RivalCredits:
-    register: true
-    name: "credits"
 
 # do not change this
 version: 10

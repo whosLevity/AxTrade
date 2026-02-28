@@ -29,6 +29,8 @@ trade:
   aborted: "&#CCFFEEYour trade with &#00FFDD%player% &#CCFFEEwas aborted!"
   blacklisted-item: "&#CCFFEEThis item is blacklisted!"
   inventory-full: "&#CCFFEEYou can't put any more items in the gui, because your trade partner has no more empty slots."
+  cosmetic-selected: "&#CCFFEECosmetic offer selected."
+  cosmetic-lock-failed: "&#FF6666Unable to lock that cosmetic for trade."
   preview-info: "&#CCFFEEYou are opening the preview gui, this is meant for testing your configuration, clicking buttons will cause errors and might not work."
 
 toggle:

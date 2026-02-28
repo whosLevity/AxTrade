@@ -21,6 +21,8 @@ public class TradePlayer {
     private TradeGui tradeGui;
     private final Trade trade;
     private final ConcurrentHashMap<CurrencyHook, Double> currencies = new ConcurrentHashMap<>();
+    private TradeCosmeticOffer cosmeticOffer = null;
+    private Integer cosmeticSlot = null;
 
     // confirmed
     // null > not confirmed
@@ -108,6 +110,27 @@ public class TradePlayer {
 
     public ConcurrentHashMap<CurrencyHook, Double> getCurrencies() {
         return currencies;
+    }
+
+    public TradeCosmeticOffer getCosmeticOffer() {
+        return cosmeticOffer;
+    }
+
+    public void setCosmeticOffer(TradeCosmeticOffer cosmeticOffer) {
+        this.cosmeticOffer = cosmeticOffer;
+    }
+
+    public void clearCosmeticOffer() {
+        this.cosmeticOffer = null;
+        this.cosmeticSlot = null;
+    }
+
+    public Integer getCosmeticSlot() {
+        return cosmeticSlot;
+    }
+
+    public void setCosmeticSlot(Integer cosmeticSlot) {
+        this.cosmeticSlot = cosmeticSlot;
     }
 
     public double getCurrency(String currency) {

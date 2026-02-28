@@ -4,6 +4,7 @@ import com.artillexstudios.axapi.scheduler.Scheduler;
 import com.artillexstudios.axtrade.api.events.AxTradeAbortEvent;
 import com.artillexstudios.axtrade.api.events.AxTradeCompleteEvent;
 import com.artillexstudios.axtrade.currency.CurrencyProcessor;
+import com.artillexstudios.axtrade.hooks.other.LevityCosmeticsBridge;
 import com.artillexstudios.axtrade.hooks.currency.CurrencyHook;
 import com.artillexstudios.axtrade.utils.HistoryUtils;
 import com.artillexstudios.axtrade.utils.NumberUtils;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.artillexstudios.axtrade.AxTrade.CONFIG;
 import static com.artillexstudios.axtrade.AxTrade.LANG;
@@ -28,6 +30,7 @@ import static com.artillexstudios.axtrade.AxTrade.MESSAGEUTILS;
 public class Trade {
     protected final TradePlayer player1;
     protected final TradePlayer player2;
+    private final String tradeId = UUID.randomUUID().toString();
     private boolean ended = false;
     protected long prepTime = System.currentTimeMillis();
 
@@ -63,7 +66,6 @@ public class Trade {
 
         AxTradeAbortEvent event = new AxTradeAbortEvent(this);
         Bukkit.getPluginManager().callEvent(event);
-
         end();
         player1.getTradeGui().getItems(false).forEach(itemStack -> {
             if (itemStack == null) return;
@@ -75,6 +77,7 @@ public class Trade {
                 addOrDrop(player2.getPlayer().getInventory(), List.of(itemStack), player2.getPlayer().getLocation());
             });
         }
+        unlockCosmeticOffers();
         HistoryUtils.writeToHistory(String.format("Aborted: %s - %s", player1.getPlayer().getName(), player2.getPlayer().getName()));
         MESSAGEUTILS.sendLang(player1.getPlayer(), "trade.aborted", Map.of("%player%", player2.getPlayer().getName()));
         MESSAGEUTILS.sendLang(player2.getPlayer(), "trade.aborted", Map.of("%player%", player1.getPlayer().getName()));
@@ -193,9 +196,59 @@ public class Trade {
                     }
                 });
 
+                List<String> player1Cosmetics = new ArrayList<>();
+                List<String> player2Cosmetics = new ArrayList<>();
+
+                TradeCosmeticOffer p1Offer = player1.getCosmeticOffer();
+                if (p1Offer != null) {
+                    boolean ok = LevityCosmeticsBridge.completeTrade(
+                            player1.getPlayer().getUniqueId(),
+                            player2.getPlayer().getUniqueId(),
+                            p1Offer.slotUid(),
+                            tradeId
+                    );
+                    if (ok) {
+                        player1Cosmetics.add(p1Offer.cosmeticName());
+                        if (CONFIG.getBoolean("enable-trade-summaries")) {
+                            MESSAGEUTILS.sendFormatted(player1.getPlayer(), LANG.getString("summary.give.item"), Map.of("%amount%", "1", "%item%", p1Offer.cosmeticName()));
+                            MESSAGEUTILS.sendFormatted(player2.getPlayer(), LANG.getString("summary.get.item"), Map.of("%amount%", "1", "%item%", p1Offer.cosmeticName()));
+                        }
+                    } else {
+                        LevityCosmeticsBridge.unlockTrade(player1.getPlayer().getUniqueId(), p1Offer.slotUid(), tradeId);
+                    }
+                    player1.clearCosmeticOffer();
+                }
+
+                TradeCosmeticOffer p2Offer = player2.getCosmeticOffer();
+                if (p2Offer != null) {
+                    boolean ok = LevityCosmeticsBridge.completeTrade(
+                            player2.getPlayer().getUniqueId(),
+                            player1.getPlayer().getUniqueId(),
+                            p2Offer.slotUid(),
+                            tradeId
+                    );
+                    if (ok) {
+                        player2Cosmetics.add(p2Offer.cosmeticName());
+                        if (CONFIG.getBoolean("enable-trade-summaries")) {
+                            MESSAGEUTILS.sendFormatted(player2.getPlayer(), LANG.getString("summary.give.item"), Map.of("%amount%", "1", "%item%", p2Offer.cosmeticName()));
+                            MESSAGEUTILS.sendFormatted(player1.getPlayer(), LANG.getString("summary.get.item"), Map.of("%amount%", "1", "%item%", p2Offer.cosmeticName()));
+                        }
+                    } else {
+                        LevityCosmeticsBridge.unlockTrade(player2.getPlayer().getUniqueId(), p2Offer.slotUid(), tradeId);
+                    }
+                    player2.clearCosmeticOffer();
+                }
+
                 HistoryUtils.writeToHistory(
-                        String.format("%s: [Currencies: %s] [Items: %s] | %s: [Currencies: %s] [Items: %s]",
-                                player1.getPlayer().getName(), player1Currencies.isEmpty() ? "---" : String.join(", ", player1Currencies), player1Items.isEmpty() ? "---" : String.join(", ", player1Items), player2.getPlayer().getName(), player2Currencies.isEmpty() ? "---" : String.join(", ", player2Currencies), player2Items.isEmpty() ? "---" : String.join(", ", player2Items)));
+                        String.format("%s: [Currencies: %s] [Items: %s] [Cosmetics: %s] | %s: [Currencies: %s] [Items: %s] [Cosmetics: %s]",
+                                player1.getPlayer().getName(),
+                                player1Currencies.isEmpty() ? "---" : String.join(", ", player1Currencies),
+                                player1Items.isEmpty() ? "---" : String.join(", ", player1Items),
+                                player1Cosmetics.isEmpty() ? "---" : String.join(", ", player1Cosmetics),
+                                player2.getPlayer().getName(),
+                                player2Currencies.isEmpty() ? "---" : String.join(", ", player2Currencies),
+                                player2Items.isEmpty() ? "---" : String.join(", ", player2Items),
+                                player2Cosmetics.isEmpty() ? "---" : String.join(", ", player2Cosmetics)));
             });
         });
     }
@@ -204,12 +257,26 @@ public class Trade {
         return prepTime;
     }
 
+    public void touchPrepTime() {
+        this.prepTime = System.currentTimeMillis();
+    }
+
     public TradePlayer getPlayer1() {
         return player1;
     }
 
     public TradePlayer getPlayer2() {
         return player2;
+    }
+
+    public String getTradeId() {
+        return tradeId;
+    }
+
+    public TradePlayer getTradePlayer(UUID uuid) {
+        if (player1.getPlayer().getUniqueId().equals(uuid)) return player1;
+        if (player2.getPlayer().getUniqueId().equals(uuid)) return player2;
+        return null;
     }
 
     public Player getOtherPlayer(Player player) {
@@ -228,5 +295,19 @@ public class Trade {
                 remaining.forEach((k, v) -> copy.getWorld().dropItem(copy, v));
             }
         });
+    }
+
+    private void unlockCosmeticOffers() {
+        if (!LevityCosmeticsBridge.isAvailable()) return;
+        TradeCosmeticOffer p1Offer = player1.getCosmeticOffer();
+        if (p1Offer != null) {
+            LevityCosmeticsBridge.unlockTrade(player1.getPlayer().getUniqueId(), p1Offer.slotUid(), tradeId);
+            player1.clearCosmeticOffer();
+        }
+        TradeCosmeticOffer p2Offer = player2.getCosmeticOffer();
+        if (p2Offer != null) {
+            LevityCosmeticsBridge.unlockTrade(player2.getPlayer().getUniqueId(), p2Offer.slotUid(), tradeId);
+            player2.clearCosmeticOffer();
+        }
     }
 }
