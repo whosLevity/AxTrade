@@ -201,6 +201,7 @@ public class Trade {
 
                 TradeCosmeticOffer p1Offer = player1.getCosmeticOffer();
                 if (p1Offer != null) {
+                    String cosmeticLabel = getCosmeticSummaryName(p1Offer);
                     boolean ok = LevityCosmeticsBridge.completeTrade(
                             player1.getPlayer().getUniqueId(),
                             player2.getPlayer().getUniqueId(),
@@ -208,10 +209,10 @@ public class Trade {
                             tradeId
                     );
                     if (ok) {
-                        player1Cosmetics.add(p1Offer.cosmeticName());
+                        player1Cosmetics.add(cosmeticLabel);
                         if (CONFIG.getBoolean("enable-trade-summaries")) {
-                            MESSAGEUTILS.sendFormatted(player1.getPlayer(), LANG.getString("summary.give.item"), Map.of("%amount%", "1", "%item%", p1Offer.cosmeticName()));
-                            MESSAGEUTILS.sendFormatted(player2.getPlayer(), LANG.getString("summary.get.item"), Map.of("%amount%", "1", "%item%", p1Offer.cosmeticName()));
+                            MESSAGEUTILS.sendFormatted(player1.getPlayer(), LANG.getString("summary.give.item"), Map.of("%amount%", "1", "%item%", cosmeticLabel));
+                            MESSAGEUTILS.sendFormatted(player2.getPlayer(), LANG.getString("summary.get.item"), Map.of("%amount%", "1", "%item%", cosmeticLabel));
                         }
                     } else {
                         LevityCosmeticsBridge.unlockTrade(player1.getPlayer().getUniqueId(), p1Offer.slotUid(), tradeId);
@@ -221,6 +222,7 @@ public class Trade {
 
                 TradeCosmeticOffer p2Offer = player2.getCosmeticOffer();
                 if (p2Offer != null) {
+                    String cosmeticLabel = getCosmeticSummaryName(p2Offer);
                     boolean ok = LevityCosmeticsBridge.completeTrade(
                             player2.getPlayer().getUniqueId(),
                             player1.getPlayer().getUniqueId(),
@@ -228,10 +230,10 @@ public class Trade {
                             tradeId
                     );
                     if (ok) {
-                        player2Cosmetics.add(p2Offer.cosmeticName());
+                        player2Cosmetics.add(cosmeticLabel);
                         if (CONFIG.getBoolean("enable-trade-summaries")) {
-                            MESSAGEUTILS.sendFormatted(player2.getPlayer(), LANG.getString("summary.give.item"), Map.of("%amount%", "1", "%item%", p2Offer.cosmeticName()));
-                            MESSAGEUTILS.sendFormatted(player1.getPlayer(), LANG.getString("summary.get.item"), Map.of("%amount%", "1", "%item%", p2Offer.cosmeticName()));
+                            MESSAGEUTILS.sendFormatted(player2.getPlayer(), LANG.getString("summary.give.item"), Map.of("%amount%", "1", "%item%", cosmeticLabel));
+                            MESSAGEUTILS.sendFormatted(player1.getPlayer(), LANG.getString("summary.get.item"), Map.of("%amount%", "1", "%item%", cosmeticLabel));
                         }
                     } else {
                         LevityCosmeticsBridge.unlockTrade(player2.getPlayer().getUniqueId(), p2Offer.slotUid(), tradeId);
@@ -309,5 +311,13 @@ public class Trade {
             LevityCosmeticsBridge.unlockTrade(player2.getPlayer().getUniqueId(), p2Offer.slotUid(), tradeId);
             player2.clearCosmeticOffer();
         }
+    }
+
+    private String getCosmeticSummaryName(TradeCosmeticOffer offer) {
+        ItemStack preview = offer.previewItem();
+        if (preview != null && preview.hasItemMeta() && preview.getItemMeta() != null && preview.getItemMeta().hasDisplayName()) {
+            return preview.getItemMeta().getDisplayName();
+        }
+        return offer.cosmeticName();
     }
 }

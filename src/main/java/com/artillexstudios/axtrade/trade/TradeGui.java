@@ -20,6 +20,7 @@ import dev.triumphteam.gui.guis.GuiItem;
 import dev.triumphteam.gui.guis.StorageGui;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Tag;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.inventory.ClickType;
@@ -31,6 +32,7 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,16 +41,17 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Locale;
 import java.util.stream.Collectors;
 
 import static com.artillexstudios.axtrade.AxTrade.CONFIG;
 import static com.artillexstudios.axtrade.AxTrade.GUIS;
 import static com.artillexstudios.axtrade.AxTrade.LANG;
 import static com.artillexstudios.axtrade.AxTrade.MESSAGEUTILS;
+import static com.artillexstudios.axtrade.AxTrade.getInstance;
 
 public class TradeGui extends GuiFrame {
     private static final Cooldown<Player> confirmCooldown = Cooldown.create();
+    private static final String COSMETIC_OFFER_MARKER = "axtrade_cosmetic_offer_item";
     protected final Trade trade;
     private final TradePlayer player;
     protected final StorageGui gui;
@@ -213,6 +216,15 @@ public class TradeGui extends GuiFrame {
             event.setCancelled(true);
             return;
         }
+
+        if (isOwnCosmeticSlot(event.getSlot())) {
+            event.setCancelled(true);
+            if (event.getClick().isRightClick() || event.getClick().isShiftClick()) {
+                removeOwnCosmeticOffer();
+            }
+            return;
+        }
+
         ItemStack it = getItem(event);
 
         if (BlacklistUtils.isBlacklisted(it)) {
@@ -234,19 +246,6 @@ public class TradeGui extends GuiFrame {
             if (event.getCursor() == null) return;
             player.getPlayer().getInventory().addItem(event.getCursor().clone());
             event.getCursor().setAmount(0);
-            return;
-        }
-
-        if (isOwnCosmeticSlot(event.getSlot())) {
-            event.setCancelled(true);
-            if (event.getClick().isRightClick() || event.getClick().isShiftClick()) {
-                if (LevityCosmeticsBridge.isAvailable() && player.getCosmeticOffer() != null) {
-                    LevityCosmeticsBridge.unlockTrade(player.getPlayer().getUniqueId(), player.getCosmeticOffer().slotUid(), trade.getTradeId());
-                }
-                player.clearCosmeticOffer();
-                player.cancel();
-                Scheduler.get().run(task -> trade.update());
-            }
             return;
         }
 
@@ -435,7 +434,7 @@ public class TradeGui extends GuiFrame {
                 item = new ItemStack(org.bukkit.Material.PAPER);
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
-                    meta.setDisplayName(StringUtils.formatToString("&#00ffdd&l" + hook.getName()));
+                    meta.setDisplayName(StringUtils.formatToString(Utils.getFormattedCurrency(hook)));
                     meta.setLore(List.of(
                             StringUtils.formatToString("&7Current offer: &f" + NumberUtils.formatNumber(player.getCurrency(hook.getName()))),
                             StringUtils.formatToString("&8Click to set amount")
@@ -515,7 +514,7 @@ public class TradeGui extends GuiFrame {
         }
         return tradePlayer.getCurrencies().entrySet().stream()
                 .sorted(Comparator.comparing(e -> e.getKey().getName()))
-                .map(entry -> toTitleCase(entry.getKey().getName()) + ": " + NumberUtils.formatNumber(entry.getValue()))
+                .map(entry -> Utils.stripFormatting(Utils.getFormattedCurrency(entry.getKey())) + ": " + NumberUtils.formatNumber(entry.getValue()))
                 .collect(Collectors.joining(", "));
     }
 
@@ -547,24 +546,8 @@ public class TradeGui extends GuiFrame {
         }
         return source.getCurrencies().entrySet().stream()
                 .sorted(Comparator.comparing(e -> e.getKey().getName()))
-                .map(entry -> StringUtils.formatToString(" &7- &f" + toTitleCase(entry.getKey().getName()) + ": &#00ffdd" + NumberUtils.formatNumber(entry.getValue())))
+                .map(entry -> StringUtils.formatToString(" &7- &f" + Utils.stripFormatting(Utils.getFormattedCurrency(entry.getKey())) + ": &#00ffdd" + NumberUtils.formatNumber(entry.getValue())))
                 .toList();
-    }
-
-    private String toTitleCase(String value) {
-        if (value == null || value.isBlank()) return "";
-        String normalized = value.replace('_', ' ').replace('-', ' ');
-        String[] parts = normalized.trim().split("\\s+");
-        StringBuilder out = new StringBuilder();
-        for (int i = 0; i < parts.length; i++) {
-            String part = parts[i];
-            if (part.isEmpty()) continue;
-            String lower = part.toLowerCase(Locale.ROOT);
-            out.append(Character.toUpperCase(lower.charAt(0)));
-            if (lower.length() > 1) out.append(lower.substring(1));
-            if (i < parts.length - 1) out.append(' ');
-        }
-        return out.toString();
     }
 
     public void handleShulkerClick(InventoryClickEvent event) {
@@ -617,6 +600,12 @@ public class TradeGui extends GuiFrame {
                 continue;
             }
             ItemStack item = gui.getInventory().getItem(slot);
+            if (isCosmeticOfferDisplayItem(item)) {
+                if (includeAir) {
+                    items.add(null);
+                }
+                continue;
+            }
             if (!includeAir && item == null) continue;
             items.add(item);
         }
@@ -664,17 +653,14 @@ public class TradeGui extends GuiFrame {
     }
 
     private void renderCosmeticOffers() {
+        clearStaleCosmeticDisplayItems();
+
         TradeCosmeticOffer ownOffer = player.getCosmeticOffer();
         if (ownOffer != null && player.getCosmeticSlot() != null) {
-            gui.updateItem(player.getCosmeticSlot(), new GuiItem(buildCosmeticItem(ownOffer), event -> {
+            gui.updateItem(player.getCosmeticSlot(), new GuiItem(buildCosmeticItem(ownOffer, true), event -> {
                 event.setCancelled(true);
                 if (event.getClick().isRightClick() || event.getClick().isShiftClick()) {
-                    if (LevityCosmeticsBridge.isAvailable()) {
-                        LevityCosmeticsBridge.unlockTrade(player.getPlayer().getUniqueId(), ownOffer.slotUid(), trade.getTradeId());
-                    }
-                    player.clearCosmeticOffer();
-                    player.cancel();
-                    Scheduler.get().run(task -> trade.update());
+                    removeOwnCosmeticOffer();
                 }
             }));
         }
@@ -685,28 +671,64 @@ public class TradeGui extends GuiFrame {
             int idx = slots.indexOf(otherOwnSlot);
             if (idx >= 0 && idx < otherSlots.size()) {
                 int partnerViewSlot = otherSlots.get(idx);
-                gui.updateItem(partnerViewSlot, new GuiItem(buildCosmeticItem(otherOffer), event -> event.setCancelled(true)));
+                gui.updateItem(partnerViewSlot, new GuiItem(buildCosmeticItem(otherOffer, false), event -> event.setCancelled(true)));
             }
         }
     }
 
-    private ItemStack buildCosmeticItem(TradeCosmeticOffer offer) {
+    private void clearStaleCosmeticDisplayItems() {
+        for (int slot : slots) {
+            if (isCosmeticOfferDisplayItem(gui.getInventory().getItem(slot))) {
+                gui.removeItem(slot);
+            }
+        }
+        for (int slot : otherSlots) {
+            if (isCosmeticOfferDisplayItem(gui.getInventory().getItem(slot))) {
+                gui.removeItem(slot);
+            }
+        }
+    }
+
+    private ItemStack buildCosmeticItem(TradeCosmeticOffer offer, boolean removable) {
         ItemStack stack = offer.previewItem() == null
                 ? new ItemStack(org.bukkit.Material.NETHER_STAR)
                 : offer.previewItem().clone();
         ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             List<String> lore = meta.getLore() == null ? new ArrayList<>() : new ArrayList<>(meta.getLore());
-            lore.add(StringUtils.formatToString("&8"));
-            lore.add(StringUtils.formatToString("&7Trade Cosmetic: &f" + offer.cosmeticName()));
-            lore.add(StringUtils.formatToString("&7Type: &f" + offer.cosmeticType()));
-            lore.add(StringUtils.formatToString("&8Right-click to remove"));
+            if (removable) {
+                lore.add(StringUtils.formatToString("&8"));
+                lore.add(StringUtils.formatToString("&8Right-click to remove"));
+            }
             meta.setLore(lore);
+            meta.getPersistentDataContainer().set(getCosmeticOfferMarkerKey(), PersistentDataType.BYTE, (byte) 1);
             if (offer.previewItem() == null || !meta.hasDisplayName()) {
                 meta.setDisplayName(StringUtils.formatToString("&#00ffdd&lCosmetic: &f" + offer.cosmeticName()));
             }
             stack.setItemMeta(meta);
         }
         return stack;
+    }
+
+    private void removeOwnCosmeticOffer() {
+        TradeCosmeticOffer offer = player.getCosmeticOffer();
+        if (offer != null && LevityCosmeticsBridge.isAvailable()) {
+            LevityCosmeticsBridge.unlockTrade(player.getPlayer().getUniqueId(), offer.slotUid(), trade.getTradeId());
+        }
+        player.clearCosmeticOffer();
+        player.cancel();
+        Scheduler.get().run(task -> trade.update());
+    }
+
+    private boolean isCosmeticOfferDisplayItem(ItemStack item) {
+        if (item == null || item.getType().isAir() || !item.hasItemMeta()) return false;
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return false;
+        Byte marker = meta.getPersistentDataContainer().get(getCosmeticOfferMarkerKey(), PersistentDataType.BYTE);
+        return marker != null && marker == (byte) 1;
+    }
+
+    private NamespacedKey getCosmeticOfferMarkerKey() {
+        return new NamespacedKey(getInstance(), COSMETIC_OFFER_MARKER);
     }
 }
